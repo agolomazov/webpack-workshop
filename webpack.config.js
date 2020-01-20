@@ -4,6 +4,30 @@ const webpack = require('webpack');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const OptimizeCssAssetsWebpackPlugin = require('optimize-css-assets-webpack-plugin');
+const TerserWebpackPlugin = require('terser-webpack-plugin');
+
+const isDev = process.env.NODE_ENV === 'development';
+const isProd = !isDev;
+
+const optimization = () => {
+  const config = {
+    splitChunks: {
+      chunks: 'all',
+    }
+  };
+
+  if (isProd) {
+    config.minimizer = [
+      new OptimizeCssAssetsWebpackPlugin(),
+      new TerserWebpackPlugin(),
+    ];
+  }
+
+  return config;
+};
+
+const filename = ext => isDev ? `[name].${ext}` : `[name].[hash].${ext}`;
 
 module.exports = {
   context: path.resolve(__dirname, './src'),
@@ -25,6 +49,34 @@ module.exports = {
             }
           },
           'css-loader'
+        ]
+      },
+      {
+        test: /\.less$/i,
+        use: [
+          {
+            loader: MiniCssExtractPlugin.loader,
+            options: {
+              hmr: true,
+              reloadAll: true
+            }
+          },
+          'css-loader',
+          'less-loader'
+        ]
+      },
+      {
+        test: /\.(sass|scss)$/i,
+        use: [
+          {
+            loader: MiniCssExtractPlugin.loader,
+            options: {
+              hmr: true,
+              reloadAll: true
+            }
+          },
+          'css-loader',
+          'sass-loader'
         ]
       },
       {
@@ -51,7 +103,7 @@ module.exports = {
     ]
   },
   output: {
-    filename: '[name].[hash].js',
+    filename: filename('js'),
     path: path.resolve(__dirname, 'dist')
   },
   resolve: {
@@ -68,7 +120,7 @@ module.exports = {
       title: 'Webpack $_GET!',
       template: 'index.html',
       minify: {
-        collapseWhitespace: true
+        collapseWhitespace: isProd
       }
     }),
     new CopyWebpackPlugin([
@@ -78,16 +130,12 @@ module.exports = {
       }
     ]),
     new MiniCssExtractPlugin({
-      filename: '[name].[hash].css'
+      filename: filename('css')
     })
   ],
-  optimization: {
-    splitChunks: {
-      chunks: 'all'
-    }
-  },
+  optimization: optimization(),
   devServer: {
     port: 4200,
-    hot: true,
+    hot: isDev,
   }
 };
